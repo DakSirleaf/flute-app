@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/contexts/AuthContext";
 import { motion } from "framer-motion";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { signIn, signUp } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,26 +19,35 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
-          setError(error.message || "Failed to sign in");
-        } else {
-          router.push("/feed");
-        }
-      } else {
-        if (!name.trim()) {
-          setError("Name is required");
-          setLoading(false);
-          return;
-        }
-        const { error } = await signUp(email, password, name);
-        if (error) {
-          setError(error.message || "Failed to sign up");
-        } else {
-          router.push("/feed");
-        }
+      // Validate join code
+      if (joinCode.trim().toLowerCase() !== "flute2026") {
+        setError("Invalid join code");
+        setLoading(false);
+        return;
       }
+
+      if (!name.trim()) {
+        setError("Name is required");
+        setLoading(false);
+        return;
+      }
+
+      if (!isLogin && !role.trim()) {
+        setError("Role or Team is required");
+        setLoading(false);
+        return;
+      }
+
+      // Store user info in localStorage for now
+      const userData = {
+        name: name.trim(),
+        role: role.trim() || "Member",
+        joinCode: joinCode.trim(),
+        id: Date.now().toString(),
+      };
+      localStorage.setItem("flute_user", JSON.stringify(userData));
+
+      router.push("/feed");
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -49,122 +56,256 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-darkBg to-gray-900 px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative"
+      style={{
+        backgroundColor: "#0c0c14",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        background: "radial-gradient(ellipse at center, rgba(94, 234, 212, 0.08) 0%, transparent 70%), #0c0c14"
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card p-8 max-w-md w-full"
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative z-10 w-full"
+        style={{
+          maxWidth: "420px",
+          padding: "2.5rem",
+          background: "rgba(255, 255, 255, 0.05)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(94, 234, 212, 0.2)",
+          borderRadius: "20px",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4), 0 0 40px rgba(94, 234, 212, 0.1)"
+        }}
       >
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">Flute</h1>
-          <p className="text-gray-300">Jump on the Flute!</p>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1
+            className="font-bold mb-3"
+            style={{
+              fontSize: "3rem",
+              color: "#5eead4",
+              fontFamily: "'Plus Jakarta Sans', sans-serif"
+            }}
+          >
+            Flute
+          </h1>
+          <p
+            style={{
+              color: "#8888aa",
+              fontSize: "0.95rem",
+              fontFamily: "'Plus Jakarta Sans', sans-serif"
+            }}
+          >
+            Jump on the Flute!
+          </p>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        {/* Tab Buttons */}
+        <div className="flex gap-3 mb-10">
           <button
+            type="button"
             onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-              isLogin
-                ? "bg-primary text-darkBg"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
+            className="flex-1 py-3 rounded-xl font-semibold transition-all"
+            style={{
+              background: isLogin ? "#5eead4" : "rgba(255, 255, 255, 0.05)",
+              color: isLogin ? "#0c0c14" : "#9ca3af",
+              border: isLogin ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: "0.95rem"
+            }}
           >
-            Login
+            Sign In
           </button>
           <button
+            type="button"
             onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
-              !isLogin
-                ? "bg-primary text-darkBg"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
+            className="flex-1 py-3 rounded-xl font-semibold transition-all"
+            style={{
+              background: !isLogin ? "#5eead4" : "rgba(255, 255, 255, 0.05)",
+              color: !isLogin ? "#0c0c14" : "#9ca3af",
+              border: !isLogin ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: "0.95rem"
+            }}
           >
             Sign Up
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name Field */}
+          <div>
+            <label
+              htmlFor="name"
+              className="block font-medium mb-2"
+              style={{
+                color: "#8888aa",
+                fontSize: "0.875rem",
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}
+            >
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your full name"
+              required
+              className="w-full transition-all"
+              style={{
+                background: "#1a1a2e",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "12px",
+                padding: "14px",
+                color: "#ffffff",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: "0.95rem",
+                outline: "none"
+              }}
+              onFocus={(e) => {
+                e.target.style.border = "1px solid #5eead4";
+                e.target.style.boxShadow = "0 0 0 4px rgba(94, 234, 212, 0.15)";
+              }}
+              onBlur={(e) => {
+                e.target.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                e.target.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
+          {/* Role Field - Only for Sign Up */}
           {!isLogin && (
             <div>
               <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                htmlFor="role"
+                className="block font-medium mb-2"
+                style={{
+                  color: "#8888aa",
+                  fontSize: "0.875rem",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif"
+                }}
               >
-                Name
+                Role or Team
               </label>
               <input
-                id="name"
+                id="role"
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Your name"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="e.g., Designer, Engineering, Marketing"
                 required={!isLogin}
+                className="w-full transition-all"
+                style={{
+                  background: "#1a1a2e",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "12px",
+                  padding: "14px",
+                  color: "#ffffff",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: "0.95rem",
+                  outline: "none"
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = "1px solid #5eead4";
+                  e.target.style.boxShadow = "0 0 0 4px rgba(94, 234, 212, 0.15)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                  e.target.style.boxShadow = "none";
+                }}
               />
             </div>
           )}
 
+          {/* Join Code Field */}
           <div>
             <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              htmlFor="joinCode"
+              className="block font-medium mb-2"
+              style={{
+                color: "#8888aa",
+                fontSize: "0.875rem",
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}
             >
-              Email
+              Join Code
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="you@example.com"
+              id="joinCode"
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="Enter your organization's join code"
               required
+              className="w-full transition-all"
+              style={{
+                background: "#1a1a2e",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "12px",
+                padding: "14px",
+                color: "#ffffff",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: "0.95rem",
+                outline: "none"
+              }}
+              onFocus={(e) => {
+                e.target.style.border = "1px solid #5eead4";
+                e.target.style.boxShadow = "0 0 0 4px rgba(94, 234, 212, 0.15)";
+              }}
+              onBlur={(e) => {
+                e.target.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                e.target.style.boxShadow = "none";
+              }}
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-300 mb-2"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="••••••••"
-              required
-              minLength={6}
-            />
-          </div>
-
+          {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-300 text-sm">
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                color: "#fca5a5",
+                fontSize: "0.875rem",
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}
+            >
               {error}
             </div>
           )}
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-darkBg font-semibold py-3 rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full font-semibold transition-all"
+            style={{
+              background: loading ? "rgba(94, 234, 212, 0.5)" : "#5eead4",
+              color: "#0c0c14",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontSize: "1rem",
+              padding: "14px",
+              borderRadius: "12px",
+              marginTop: "1.5rem"
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
           >
             {loading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => router.push("/")}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
-          >
-            Back to Home
-          </button>
-        </div>
       </motion.div>
     </div>
   );
